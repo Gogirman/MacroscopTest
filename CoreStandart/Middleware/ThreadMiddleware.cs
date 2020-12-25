@@ -28,7 +28,7 @@ namespace CoreStandart.Middleware
 
         public async Task InvokeAsync(HttpContext context)
         {
-            if (_counter.GetCounter() >= int.Parse(_config["Count"]))
+            if (_counter.GetCounter() >= int.Parse(_config["MaxRequestsCount"]))
             {
                 throw new OverloadRequestException();
             }
