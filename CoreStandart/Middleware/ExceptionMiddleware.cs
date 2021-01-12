@@ -44,20 +44,19 @@ namespace CoreStandart.Middleware
 
         private async Task HandleException(HttpContext context, Exception ex)
         {
-            var message = exceptionMessages.ContainsKey(ex.GetType()) ? exceptionMessages[ex.GetType()] : ex.Message;
+            var message = ex.Message;
+            exceptionMessages.TryGetValue(ex.GetType(), out message);
 
-            _logger.LogError(JsonSerializer.Serialize(new ExceptionModel
+            var errorJson = JsonSerializer.Serialize(new ExceptionModel
             {
                 Message = message,
                 ExceptionType = ex.GetType().Name
-            }));
+            });
+
+            _logger.LogError(errorJson);
 
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await context.Response.WriteAsync(JsonSerializer.Serialize(new ExceptionModel
-            {
-                Message = message,
-                ExceptionType = ex.GetType().Name
-            }));
+            await context.Response.WriteAsync(errorJson);
         } 
     }
 }

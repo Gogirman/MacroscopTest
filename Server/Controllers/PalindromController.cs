@@ -25,6 +25,7 @@ namespace Test.Controllers
         public async Task<IActionResult> CheckPalindrom([FromQuery(Name = "text")] string text)
         {
             _logger.LogInformation($"Get request: {text} || {DateTime.Now}");
+            var a = int.Parse(_config["RequestDelay"]);
             await Task.Delay(TimeSpan.FromSeconds(int.Parse(_config["RequestDelay"])));
             return Ok(await _service.CheckPalindrom(text));
         }

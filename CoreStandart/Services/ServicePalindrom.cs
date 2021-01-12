@@ -14,15 +14,12 @@ namespace CoreStandart.Services
         bool IsPalindrom(string str)
         {
             if (str == null) return false;
-            str = str.ToLower().Replace(" ", string.Empty);
-            return IsPalindromInternal(str);
+            for (int i = 0; i < str.Length / 2; i++)
+
+                if (str[i] != str[str.Length - i - 1])
+                    return false;
+            return true;
         }
 
-        bool IsPalindromInternal(string str)
-        {
-            if (str.Length == 1 || string.IsNullOrEmpty(str)) return true;
-            if (!str[0].Equals(str[str.Length - 1])) return false;
-            return IsPalindromInternal(str.Substring(1, str.Length - 2));
-        }
     }
 }

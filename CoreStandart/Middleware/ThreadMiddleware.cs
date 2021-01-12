@@ -16,10 +16,10 @@ namespace CoreStandart.Middleware
     public sealed class ThreadMiddleware
     {
         private readonly RequestDelegate _next;
-        private readonly ISingletone _counter;
+        private readonly IRequestCounter _counter;
         private IConfiguration _config;
 
-        public ThreadMiddleware(RequestDelegate next, ISingletone counter, IConfiguration config)
+        public ThreadMiddleware(RequestDelegate next, IRequestCounter counter, IConfiguration config)
         {
             _next = next;
             _counter = counter;

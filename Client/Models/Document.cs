@@ -9,7 +9,7 @@ namespace Client
     /// <summary>
     ///   Модель документа.
     /// </summary>
-    class Document
+    public  class Document
     {
         public Guid Id
         { get; set; }

@@ -1,16 +1,14 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.Command;
 using System.Windows.Forms;
 using System.IO;
-using System.Net.Http;
 using CoreStandart.Services;
-using System;
 using Client.Models;
+using Client.Helpers;
 
 namespace Client
 {
@@ -42,22 +40,23 @@ namespace Client
         public ICommand SendRequestsCommand
             => _sendRequestsCommand ?? (_sendRequestsCommand = new RelayCommand(SendRequests));
 
-
-        private HttpClient _client = new HttpClient();
-
         /// <summary>
         ///   Список выбранных документов.
         /// </summary>
         private List<DocumentVM> _documents
             = new List<DocumentVM>();
-        private readonly IServicePalindrom _servicePalindrom;
+
+        private readonly FileHelper _fileHelper;
+
+        private readonly RequestHelper _requestHelper;
 
         /// <summary>
         ///   Конструктор.
         /// </summary>
         public MainWindowVM(IServicePalindrom servicePalindrom)
         {
-            _servicePalindrom = servicePalindrom;
+            _fileHelper = new FileHelper();
+            _requestHelper = new RequestHelper(servicePalindrom);
         }
 
         /// <summary>
@@ -79,22 +78,7 @@ namespace Client
             {
                 fileNames = Directory.GetFiles(dialog.SelectedPath);
                 foreach (var fileName in fileNames)
-                {
-                    using (FileStream fstream = File.OpenRead(fileName))
-                    {
-                        byte[] array = new byte[fstream.Length];
-                        // считываем данные
-                        fstream.Read(array, 0, array.Length);
-                        // декодируем байты в строку
-                        var textFromFile = Encoding.UTF8.GetString(array);
-                        tempDocs.Add(new Document
-                        {
-                            Name = fileName,
-                            RequestStatus = Document.RequestStatuses.NotSent,
-                            Text = textFromFile
-                        });
-                    }
-                }
+                    tempDocs.Add(_fileHelper.ReadFile(fileName));
 
                 _documents.Clear();
                 _documents.AddRange(tempDocs.OrderBy(d => d.Name).Select(d => new DocumentVM(d, this)));
@@ -105,46 +89,21 @@ namespace Client
         /// <summary>
         ///   Отправка запросов.
         /// </summary>
-        private void SendRequests()
+        private async void SendRequests()
         {
-            var tasks = _documents.Select(x => Task.Run(() => PutAsync(x.Text, x.Document.Id))).ToArray();
-            var results = Task.WhenAll(tasks).GetAwaiter().GetResult();
-
-            HandlingResponse(results);
+            var tasks = _documents.Select(x => Task.Run(() => _requestHelper.SendRequest(x.Text, x.Document.Id).ContinueWith(r => HandlingResponse(r.Result), TaskContinuationOptions.OnlyOnRanToCompletion))).ToArray();
+            await Task.WhenAll(tasks);
         }
 
         /// <summary>
         ///   Обработка запросов.
         /// </summary>
-        private void HandlingResponse(ResponseResult[] results)
+        private void HandlingResponse(ResponseResult result)
         {
-            foreach (var result in results)
-            {
-                var document = _documents.Where(t => t.Document.Id == result.DocumentId).FirstOrDefault();
-                document.IsPalindrome = result.Answer;
-                document.RequestStatus = Document.RequestStatuses.Sent;
-            }
-        }
-        /// <summary>
-        ///   Асинхронный запрос серверу.
-        /// </summary>
-        private async Task<ResponseResult> PutAsync(string text, Guid id)
-        {
-            var haveResult = false;
-            bool result = false;
-            //Отправляем запросы, пока на все не получим ответ
-            while(!haveResult)
-            {
-                try
-                {
-                    result = await _servicePalindrom.CheckPalindrom(text);
-                    haveResult = true;
-                }
-                catch
-                { }
-            }
-
-            return new ResponseResult { DocumentId = id, Answer = result };
+            var document = _documents.Where(t => t.Document.Id == result.DocumentId).First();
+            document.IsPalindrome = result.Answer;
+            document.RequestStatus = Document.RequestStatuses.Sent;
+            
         }
     }
 }
